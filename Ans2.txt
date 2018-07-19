@@ -1,0 +1,38 @@
+2) 
+<aura:component controller="AccountListController" >
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+    <aura:attribute name="accounts" type="Account[]" />
+    
+    
+        <aura:iteration items="{!v.acocunts}" var="acc"> 
+        	<li > <h3>{!acc.Name}</h3> </li>
+        </aura:iteration>
+   
+</aura:component>
+
+
+({
+    doInit : function(component, event, helper) {
+        var action = component.get("c.getAccounts");
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                component.set("v.accounts", response.getReturnValue());
+            } else {
+                console.debug(response.error[0].message);
+            }
+        });
+        $A.enqueueAction(action);
+        
+    }
+})
+
+
+public class AccountListController {
+  
+  @AuraEnabled
+  public static List<Account> getAccounts() {
+      return [SELECT Name From Account ORDER BY CreatedDate DESC LIMIT 10];
+  }
+}
+

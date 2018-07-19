@@ -1,0 +1,71 @@
+1)
+
+Trigger ContactTrigger2 on Contact(after insert, after update, after delete, after undelete){
+  ContactTriggerHanlder obj = new ContactTriggerHanlder();
+  if(Trigger.isInsert || Trigger.isUndelete){
+    obj.afterInsertUpdateDeleteUndelete(Trigger.New, null);
+  }
+  if(Trigger.isUpdate){
+    obj.afterInsertUpdateDeleteUndelete(Trigger.New, Trigger.oldMap);
+  }
+  if(Trigger.isDelete){
+    obj.afterInsertUpdateDeleteUndelete(Trigger.old, null);
+  }
+}
+
+
+
+
+public Class ContactTriggerHanlder{
+
+  public void afterInsertUpdateDeleteUndelete(List<Contact> conList, Map<Id, Contact> oldMap){
+    updateCountOnAccountAfterInsert(conList, oldMap);
+  }
+  
+  public void updateCountOnAccountAfterInsert(List<Contact> conList, Map<Id, Contact> oldMap){
+    Set<Id> accIds = new Set<Id>();
+  	Map<Id, List<Contact>> mapOfAccIdAndConList = new Map<Id, List<Contact>>();
+  	List<Account> accListToUpdate = new List<Account>();
+  	
+  	for(Contact con: conList){
+  	  if(Trigger.isInsert || Trigger.isDelete || Trigger.isUndelete){
+  	    if(con.AccountId != NULL){
+    		  accIds.add(con.AccountId);
+    		}
+    	}
+  	  
+  	  if(Trigger.isUpdate){
+  	    if(con.AccountId != oldMap.get(con.Id).AccountId){
+    		  if(con.AccountId != NULL){
+    		    accIds.add(con.AccountId);
+    		  }
+    		  if(oldMap.get(con.Id).AccountId != NULL){
+    		    accIds.add(oldMap.get(con.Id).AccountId);
+    		  }
+    		}
+  	  }
+  	}
+  	
+  	if(!accIds.isEmpty()){
+  	  for(Contact con: [SELECT AccountId FROM Contact WHERE AccountId IN: accIds]){
+  	    if(mapOfAccIdAndConList.containsKey(con.AccountId)){
+  	      mapOfAccIdAndConList.get(con.AccountId).add(con);
+  	    }
+  	    else{
+  	      mapOfAccIdAndConList.put(con.AccountId, new List<Contact>{con});  
+  	    }
+  	  }
+  	}
+  	
+  	if(!mapOfAccIdAndConList.isEmpty()){
+  	  for(Id accId : mapOfAccIdAndConList.keySet()){
+  		accListToUpdate.add(new Account(Id = accId, Child_Contacts__c = mapOfAccIdAndConList.get(accId).size()));
+  	  }
+  	}
+  	
+  	if(!accListToUpdate.isEmpty()){
+  	  update accListToUpdate;
+  	}
+  	
+  }
+}
